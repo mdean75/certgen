@@ -1,8 +1,8 @@
 use std::fmt::{Display, Formatter};
 use std::{fs, io};
-use std::io::{BufRead, Write};
-use std::ops::{Add, Sub};
-use rcgen::{BasicConstraints, Certificate, DnType, DnValue, ExtendedKeyUsagePurpose, IsCa, KeyUsagePurpose};
+use std::io::{BufRead};
+use chrono::{Local};
+use rcgen::{BasicConstraints, Certificate, DnType, ExtendedKeyUsagePurpose, IsCa, KeyUsagePurpose};
 use rcgen::DnValue::PrintableString;
 use time::{OffsetDateTime, Duration};
 use rand::Rng;
@@ -35,18 +35,39 @@ impl SubjectFields {
 
 
 pub fn generate_certs(root_cn: &str, signing_cn: &str, expired: &bool) {
+    let ts = Local::now().timestamp();
+
     let server_subject = get_user_input("server");
     let client_subject = get_user_input("client");
 
+    fs::create_dir_all(format!("certs/{}", ts)).expect("TODO: panic message");
+    fs::create_dir_all(format!("certs/{}", ts+1)).expect("");
     let root_cert = create_root_cert(root_cn);
     let signing_cert = create_root_cert(signing_cn);
     let server_cert = create_cert(&server_subject, *expired, "server");
     let client_cert = create_cert(&client_subject, *expired, "client");
 
-    save_self_signed_cert(&root_cert, "root-ca.crt", "root-ca.key");
-    save_signed_cert(&signing_cert, &root_cert, "signing-ca.crt", "signing-ca.key");
-    save_signed_cert(&server_cert, &signing_cert, "server.crt", "server.key");
-    save_signed_cert(&client_cert, &server_cert, "client.crt", "client.key");
+    let serialized_root_cert = save_self_signed_cert(&root_cert, "certs/root-ca.crt", "certs/root-ca.key");
+    let serialized_signing_cert = save_signed_cert(&signing_cert, &root_cert, "certs/signing-ca.crt", "certs/signing-ca.key");
+    let serialized_server_cert = save_signed_cert(&server_cert, &signing_cert,
+           format!("certs/{}/server.crt", ts).as_str(), format!("certs/{}/server.key", ts).as_str());
+    let serialized_client_cert = save_signed_cert(&client_cert, &signing_cert,
+          format!("certs/{}/client.crt", ts+1).as_str(), format!("certs/{}/client.key", ts + 1).as_str());
+
+    println!("server bundle");
+    save_cert_bundle(vec![serialized_server_cert.as_str(),
+                          serialized_signing_cert.as_str(),
+                          serialized_root_cert.as_str()],
+                    format!("certs/{}/server-bundle.crt", ts).as_str());
+
+    println!("client bundle");
+    save_cert_bundle(vec![serialized_client_cert.as_str(),
+                          serialized_signing_cert.as_str(),
+                          serialized_root_cert.as_str()],
+                    format!("certs/{}/client-bundle.crt", ts + 1).as_str());
+
+    println!("server cert path: {}", ts);
+    println!("client cert path: {}", ts + 1);
 }
 
 fn get_user_input(s: &str) -> SubjectFields {
@@ -114,26 +135,43 @@ fn create_cert(subject: &SubjectFields, expired: bool, auth_type: &str) -> rcgen
     rcgen::Certificate::from_params(params).expect("")
 }
 
-fn save_self_signed_cert(cert: &Certificate, path: &str, x: &str) {
+fn save_self_signed_cert(cert: &Certificate, path: &str, key_path: &str) -> String {
+    let mut serialized_cert = String::new();
     match cert.serialize_pem() {
         Ok(sc) => {
-            fs::write(path, sc).expect("TODO: panic message");
+            fs::write(path, &sc).expect("TODO: panic message");
+            serialized_cert = sc;
         }
         Err(e) => {
-            println!("error writing file");
+            println!("error writing file: {}", e);
         }
     }
 
-    fs::write(path, cert.serialize_private_key_pem()).expect("");
+    fs::write(key_path, cert.serialize_private_key_pem()).expect("");
+
+    serialized_cert
 }
 
-fn save_signed_cert(cert: &Certificate, signing_cert: &Certificate, path: &str, x: &str) {
+fn save_signed_cert(cert: &Certificate, signing_cert: &Certificate, path: &str, key_path: &str) -> String {
+    let mut serialized_cert = String::new();
     match cert.serialize_pem_with_signer(&signing_cert) {
         Ok(sc) => {
-            fs::write(path, sc).expect("")
+            fs::write(path, &sc).expect("");
+            serialized_cert = sc;
         }
         Err(e) => println!("{}", e)
     }
 
-    fs::write(path, cert.serialize_private_key_pem()).expect("");
+    fs::write(key_path, cert.serialize_private_key_pem()).expect("");
+
+    serialized_cert
+}
+
+fn save_cert_bundle(chain: Vec<&str>, path: &str) {
+    let mut cert_bundle = String::new();
+    for i in chain {
+        cert_bundle.push_str(i)
+    }
+
+    fs::write(path, cert_bundle).expect("");
 }
