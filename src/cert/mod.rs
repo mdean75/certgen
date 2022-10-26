@@ -2,8 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::{fs, io};
 use std::io::{BufRead};
 use chrono::{Local};
-use rcgen::{BasicConstraints, Certificate, DnType, ExtendedKeyUsagePurpose, IsCa, KeyUsagePurpose};
-use rcgen::DnValue::PrintableString;
+use rcgen::{DnType, DnValue, BasicConstraints, IsCa, KeyUsagePurpose, ExtendedKeyUsagePurpose, DistinguishedName};
 use time::{OffsetDateTime, Duration};
 use rand::Rng;
 
@@ -91,8 +90,8 @@ fn get_user_input(s: &str) -> SubjectFields {
 fn create_root_cert(cn: &str) -> rcgen::Certificate {
     let mut params = rcgen::CertificateParams::new(vec!["".to_string()]);
 
-    let mut dn = rcgen::DistinguishedName::new();
-    dn.push(rcgen::DnType::CommonName, PrintableString(cn.to_string()));
+    let mut dn = DistinguishedName::new();
+    dn.push(DnType::CommonName, DnValue::PrintableString(cn.to_string()));
 
     params.distinguished_name = dn;
     params.not_before = OffsetDateTime::now_utc();
@@ -108,11 +107,11 @@ fn create_root_cert(cn: &str) -> rcgen::Certificate {
 fn create_cert(subject: &SubjectFields, expired: bool, auth_type: &str) -> rcgen::Certificate {
     let mut params = rcgen::CertificateParams::new(vec!["".to_string()]);
 
-    let mut dn = rcgen::DistinguishedName::new();
-    dn.push(rcgen::DnType::CommonName, PrintableString(subject.common_name.to_string()));
-    dn.push(DnType::OrganizationName, PrintableString(subject.organization.to_string()));
-    dn.push(DnType::OrganizationalUnitName, PrintableString(subject.organization_unit.to_string()));
-    dn.push(DnType::CountryName, PrintableString(subject.country.to_string()));
+    let mut dn = DistinguishedName::new();
+    dn.push(DnType::CommonName, DnValue::PrintableString(subject.common_name.to_string()));
+    dn.push(DnType::OrganizationName, DnValue::PrintableString(subject.organization.to_string()));
+    dn.push(DnType::OrganizationalUnitName, DnValue::PrintableString(subject.organization_unit.to_string()));
+    dn.push(DnType::CountryName, DnValue::PrintableString(subject.country.to_string()));
 
     params.distinguished_name = dn;
     if expired {
@@ -135,7 +134,7 @@ fn create_cert(subject: &SubjectFields, expired: bool, auth_type: &str) -> rcgen
     rcgen::Certificate::from_params(params).expect("")
 }
 
-fn save_self_signed_cert(cert: &Certificate, path: &str, key_path: &str) -> String {
+fn save_self_signed_cert(cert: &rcgen::Certificate, path: &str, key_path: &str) -> String {
     let mut serialized_cert = String::new();
     match cert.serialize_pem() {
         Ok(sc) => {
@@ -152,7 +151,7 @@ fn save_self_signed_cert(cert: &Certificate, path: &str, key_path: &str) -> Stri
     serialized_cert
 }
 
-fn save_signed_cert(cert: &Certificate, signing_cert: &Certificate, path: &str, key_path: &str) -> String {
+fn save_signed_cert(cert: &rcgen::Certificate, signing_cert: &rcgen::Certificate, path: &str, key_path: &str) -> String {
     let mut serialized_cert = String::new();
     match cert.serialize_pem_with_signer(&signing_cert) {
         Ok(sc) => {
