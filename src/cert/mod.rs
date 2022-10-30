@@ -98,7 +98,7 @@ fn create_root_cert(cn: &str) -> rcgen::Certificate {
     params.not_after = OffsetDateTime::now_utc().checked_add(Duration::days(365)).expect("");
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
     params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign, KeyUsagePurpose::KeyAgreement];
-    params.extended_key_usages = vec![ExtendedKeyUsagePurpose::CodeSigning];
+    params.extended_key_usages = vec![ExtendedKeyUsagePurpose::CodeSigning, ExtendedKeyUsagePurpose::ClientAuth, ExtendedKeyUsagePurpose::ServerAuth];
     params.serial_number = Some(rand::thread_rng().gen::<u64>());
 
     rcgen::Certificate::from_params(params).expect("")
