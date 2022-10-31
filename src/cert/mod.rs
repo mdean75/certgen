@@ -116,7 +116,7 @@ fn create_cert(subject: &SubjectFields, expired: bool, auth_type: &str) -> rcgen
     params.distinguished_name = dn;
     if expired {
         params.not_before = OffsetDateTime::now_utc().checked_sub(Duration::days(30)).expect("");
-        params.not_after = OffsetDateTime::now_utc().checked_add(Duration::days(1)).expect("");
+        params.not_after = OffsetDateTime::now_utc().checked_sub(Duration::days(1)).expect("");
     } else {
         params.not_before = OffsetDateTime::now_utc();
         params.not_after = OffsetDateTime::now_utc().checked_add(Duration::days(365)).expect("");
