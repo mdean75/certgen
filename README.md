@@ -55,6 +55,7 @@ Subdirectories for Client and server files are created and named as the current 
 - Nginx 1.20.1
 - glibc.x86_64 2.17-326.el7_9
 - Netcat 7.50
+- Certgen Executable built with Jenkins running on Ubuntu 22.04 and using a docker build agent running Rust image
 
 Sample nginx configuration
 
