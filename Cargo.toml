@@ -16,9 +16,14 @@ time = "0.3.15"
 rand = "0.8.5"
 chrono = "0.4.22"
 
+# The dependencies are used in the build.rs file
 [build-dependencies]
 vergen = "7.4.2"
 chrono = "0.4.22"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
+
+# Specify which linker to use for this target
+[target.x86_64-unknown-linux-gnu]
+linker = "x86_64-linux-gnu-gcc"

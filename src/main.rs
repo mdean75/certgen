@@ -17,7 +17,13 @@ fn main() {
     }
 
     match args.command {
-        Some(Commands::Gen(g)) => {cert::generate_certs(&g.root_cn, &g.signing_cn, &g.expired)}
+        Some(Commands::Gen(g)) => {
+            let cert = cert::generate_certs(&g.root_cn, &g.signing_cn, &g.expired);
+            match cert {
+                Ok(_) => {},
+                Err(e) => println!("unable to create certificates: {}", e)
+            }
+        }
         Some(Commands::Test(t)) => {println!("{:?}", print_type_of(t))}
         None => {}
     }
